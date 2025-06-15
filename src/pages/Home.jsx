@@ -438,16 +438,37 @@ const Home = () => {
     });
 
     // Listen for liked notifications
-    socket.on("likedYou", ({ fromUserId }) => {
-      console.log(`You were liked by a user with ID: ${fromUserId}`);
-      // You can fetch user details or show a toast/notification here
-    });
+    // socket.on("likedYou", ({ fromUserId }) => {
+    //   console.log(`You were liked by a user with ID: ${fromUserId}`);
+    //   // You can fetch user details or show a toast/notification here
+    // });
 
     // Cleanup socket listeners
     return () => {
       socket.off("userOnline");
       socket.off("userOffline");
+      // socket.off("likedYou");
+    };
+  }, []);
+
+  useEffect(() => {
+    socket.on("likedYou", ({ fromUserId }) => {
+      console.log(`You were liked by a user with ID: ${fromUserId}`);
+      // You can fetch user details or show a toast/notification here
+    });
+
+    return () => {
       socket.off("likedYou");
+    };
+  }, []);
+
+  useEffect(() => {
+    socket.on("matchFound", ({ user }) => {
+      console.log(`Match found with user: ${user.name}`);
+      // You can show a notification or redirect to a chat page here
+    });
+    return () => {
+      socket.off("matchFound");
     };
   }, []);
 
