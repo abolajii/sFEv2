@@ -7,9 +7,13 @@ export const getToken = async () => {
   return token ? JSON.parse(token).accessToken : null;
 };
 
-export const socketUrl = prod
+const renderTrue = true;
+
+const url = renderTrue
   ? "https://sv2be.onrender.com"
-  : "http://localhost:6500";
+  : "https://sv2-phi.vercel.app";
+
+export const socketUrl = prod ? url : "http://localhost:6500";
 
 export const baseUrl = prod
   ? "https://sv2be.onrender.com/api"

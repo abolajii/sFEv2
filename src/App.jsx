@@ -26,9 +26,7 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <AppContainer>
-        <LoadingText>Loading...</LoadingText>
-      </AppContainer>
+      <AppContainer>{/* <LoadingText>Loading...</LoadingText> */}</AppContainer>
     );
   }
 
@@ -37,6 +35,8 @@ const ProtectedRoute = ({ children }) => {
 
 const AppContainer = styled.div`
   min-height: 100vh;
+  background-color: #000000;
+
   /* background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%); */
   display: flex;
   align-items: center;
