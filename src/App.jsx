@@ -8,6 +8,7 @@ import Conversation from "./pages/Conversation";
 import SingleConversation from "./pages/SingleConversation";
 import { baseUrl } from "./api";
 import { ToastProvider } from "./components/ToastSystem";
+import DashboardLayout from "./components/Layout";
 
 const AuthContext = createContext();
 
@@ -149,9 +150,7 @@ const App = () => {
             path="/"
             element={
               <ProtectedRoute>
-                {/* <DashboardLayout> */}
                 <Home />
-                {/* </DashboardLayout> */}
               </ProtectedRoute>
             }
           />
