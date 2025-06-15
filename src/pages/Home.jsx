@@ -419,7 +419,6 @@ const Home = () => {
 
     // Listen for user online events
     socket.on("userOnline", ({ userId }) => {
-      console.log(userId, "Online");
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
           user._id === userId ? { ...user, status: "online" } : user
@@ -429,7 +428,6 @@ const Home = () => {
 
     // Listen for user offline events
     socket.on("userOffline", ({ userId }) => {
-      console.log(userId, "Offline");
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
           user._id === userId ? { ...user, status: "offline" } : user
