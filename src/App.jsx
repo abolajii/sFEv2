@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import Conversation from "./pages/Conversation";
 import SingleConversation from "./pages/SingleConversation";
 import { baseUrl } from "./api";
+import { ToastProvider } from "./components/ToastSystem";
 
 const AuthContext = createContext();
 
@@ -132,41 +133,43 @@ const AuthProvider = ({ children }) => {
 
 const App = () => {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          }
-        />
-        <Route path="/register" element={<Register />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              {/* <DashboardLayout> */}
-              <Home />
-              {/* </DashboardLayout> */}
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              {/* <DashboardLayout> */}
-              <Home />
-              {/* </DashboardLayout> */}
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/conversations" element={<Conversation />} />
-        <Route path="/conversations/:id" element={<SingleConversation />} />
-      </Routes>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
+          <Route path="/register" element={<Register />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                {/* <DashboardLayout> */}
+                <Home />
+                {/* </DashboardLayout> */}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                {/* <DashboardLayout> */}
+                <Home />
+                {/* </DashboardLayout> */}
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/conversations" element={<Conversation />} />
+          <Route path="/conversations/:id" element={<SingleConversation />} />
+        </Routes>
+      </AuthProvider>
+    </ToastProvider>
   );
 };
 

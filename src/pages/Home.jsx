@@ -5,6 +5,7 @@ import { Heart, ThumbsUp, ThumbsDown, Star, MapPin } from "lucide-react";
 import { baseUrl, getToken, LBAuth, socketUrl } from "../api";
 import { useAuth } from "../App";
 import io from "socket.io-client";
+import { useToast } from "../components/ToastSystem";
 
 const Container = styled.div`
   min-height: 100vh;
@@ -408,6 +409,8 @@ const Home = () => {
   const [error, setError] = useState(null);
   const { currentUser, logout } = useAuth();
 
+  const { showLikeToast, showMatchToast, showFavoriteToast } = useToast();
+
   useEffect(() => {
     if (currentUser?._id) {
       socket.emit("userOnline", currentUser._id);
@@ -449,26 +452,50 @@ const Home = () => {
     };
   }, []);
 
+  // useEffect(() => {
+  //   socket.on("likedYou", ({ fromUserId, name }) => {
+  //     console.log(`You were liked by a user with ID: ${fromUserId}`);
+  //     // You can fetch user details or show a toast/notification here
+  //     showLikeToast(name);
+  //   });
+
+  //   return () => {
+  //     socket.off("likedYou");
+  //   };
+  // }, []);
+
+  // useEffect(() => {
+  //   socket.on("matchFound", ({ user, convo, name }) => {
+  //     console.log(`Match found with user: ${user.name}`);
+  //     // You can show a notification or redirect to a chat page here
+  //     showMatchToast(user.name);
+  //   });
+  //   return () => {
+  //     socket.off("matchFound");
+  //   };
+  // }, []);
+
   useEffect(() => {
-    socket.on("likedYou", ({ fromUserId }) => {
+    socket.on("likedYou", ({ fromUserId, name }) => {
       console.log(`You were liked by a user with ID: ${fromUserId}`);
-      // You can fetch user details or show a toast/notification here
+      showLikeToast(name);
     });
 
     return () => {
       socket.off("likedYou");
     };
-  }, []);
+  }, [showLikeToast]);
 
   useEffect(() => {
-    socket.on("matchFound", ({ user }) => {
+    socket.on("matchFound", ({ user, convo, name }) => {
       console.log(`Match found with user: ${user.name}`);
-      // You can show a notification or redirect to a chat page here
+      showMatchToast(name || user.name);
     });
+
     return () => {
       socket.off("matchFound");
     };
-  }, []);
+  }, [showMatchToast]);
 
   const fetchAllUsers = async () => {
     try {
