@@ -412,7 +412,7 @@ const Home = () => {
     if (currentUser?._id) {
       socket.emit("userOnline", currentUser._id);
     }
-  }, [currentUser]);
+  }, []);
 
   useEffect(() => {
     fetchAllUsers();
