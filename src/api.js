@@ -8,11 +8,11 @@ export const getToken = async () => {
 };
 
 export const socketUrl = prod
-  ? "https://sv2-phi.vercel.app"
+  ? "https://sv2be.onrender.com"
   : "http://localhost:6500";
 
 export const baseUrl = prod
-  ? "https://sv2-phi.vercel.app/api"
+  ? "https://sv2be.onrender.com/api"
   : "http://localhost:6500/api";
 
 export const LBAuth = axios.create({
