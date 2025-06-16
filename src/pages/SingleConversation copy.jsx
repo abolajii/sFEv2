@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import DashboardLayout from "../components/Layout";
-import { LBAuth, socketUrl } from "../api";
+import { LBAuth } from "../api";
 import { useAuth } from "../App";
 import { ArrowLeft, Send, MoreVertical, Phone, Video } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
-import io from "socket.io-client";
 
 const Container = styled.div`
   padding: 0;
+  /* max-width: 1200px; */
+  /* margin: 0 auto; */
   background: #000000;
   min-height: 100vh;
   display: flex;
@@ -292,84 +293,10 @@ const EmptyStateIcon = styled.div`
   opacity: 0.7;
 `;
 
-const TypingIndicator = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 0;
-  animation: fadeIn 0.3s ease-in-out;
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-`;
-
-const TypingBubble = styled.div`
-  background: #16181c;
-  border: 1px solid #2f3336;
-  border-radius: 18px;
-  border-bottom-left-radius: 6px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  max-width: fit-content;
-`;
-
-const TypingDot = styled.div`
-  width: 8px;
-  height: 8px;
-  background-color: #71767b;
-  border-radius: 50%;
-  animation: typingAnimation 1.4s infinite ease-in-out;
-
-  &:nth-child(1) {
-    animation-delay: 0s;
-  }
-  &:nth-child(2) {
-    animation-delay: 0.2s;
-  }
-  &:nth-child(3) {
-    animation-delay: 0.4s;
-  }
-
-  @keyframes typingAnimation {
-    0%,
-    60%,
-    100% {
-      transform: translateY(0);
-      opacity: 0.4;
-    }
-    30% {
-      transform: translateY(-10px);
-      opacity: 1;
-    }
-  }
-`;
-
-const TypingText = styled.span`
-  font-size: 12px;
-  color: #71767b;
-  margin-left: 4px;
-`;
-
-// Initialize socket outside component to prevent re-initialization
-let socket = null;
-
 const SingleConversation = () => {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [typingUsers, setTypingUsers] = useState(new Set());
-  const typingTimeout = useRef(null);
-
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
@@ -379,43 +306,6 @@ const SingleConversation = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
-  // Initialize socket connection
-  useEffect(() => {
-    const token = JSON.parse(localStorage.getItem("token"))?.accessToken;
-    if (!socket) {
-      socket = io(socketUrl, {
-        auth: { token },
-      });
-    }
-
-    return () => {
-      // Clean up typing timeout on unmount
-      if (typingTimeout.current) {
-        clearTimeout(typingTimeout.current);
-      }
-    };
-  }, []);
-
-  const getTypingDisplayText = () => {
-    const typingUsersArray = Array.from(typingUsers);
-
-    if (typingUsersArray.length === 0) return "";
-
-    if (conversation?.isGroup) {
-      if (typingUsersArray.length === 1) {
-        return `${typingUsersArray[0].split(" ")[0]} is typing...`;
-      } else if (typingUsersArray.length === 2) {
-        return `${typingUsersArray[0].split(" ")[0]} and ${
-          typingUsersArray[1].split(" ")[0]
-        } are typing...`;
-      } else {
-        return `${typingUsersArray.length} people are typing...`;
-      }
-    } else {
-      return "";
-    }
-  };
-
   // Auto-resize textarea
   const adjustTextareaHeight = () => {
     if (inputRef.current) {
@@ -424,99 +314,12 @@ const SingleConversation = () => {
     }
   };
 
-  // Fetch conversation data and set up socket listeners
+  // Fetch conversation data
   useEffect(() => {
-    if (conversationId && socket && currentUser) {
+    if (conversationId) {
       fetchConversation();
-
-      // Join the conversation room
-      socket.emit("joinConversation", conversationId);
-
-      // Set up socket event listeners
-      const handleTyping = (data) => {
-        const { userName } = data;
-        // Don't show typing indicator for current user
-        if (userName !== currentUser.name) {
-          setTypingUsers((prev) => new Set([...prev, userName]));
-        }
-      };
-
-      const handleStopTyping = (data) => {
-        const { userName } = data;
-        setTypingUsers((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(userName);
-          return newSet;
-        });
-      };
-
-      const handleNewMessage = (message) => {
-        console.log("Received new message:", message);
-
-        // Add message to local state (this handles both sent and received messages)
-        setMessages((prev) => {
-          // Remove any temporary message with same content (optimistic update)
-          const filteredMessages = prev.filter(
-            (msg) =>
-              !(
-                msg.tempMessage &&
-                msg.content === message.content &&
-                msg.sender._id === message.sender._id
-              )
-          );
-
-          // Check if the actual message already exists to avoid duplicates
-          const messageExists = filteredMessages.some(
-            (msg) => msg._id === message._id
-          );
-          if (messageExists) return prev;
-
-          return [...filteredMessages, message];
-        });
-
-        // Update conversation with new message
-        setConversation((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            messages: [...(prev.messages || []), message],
-          };
-        });
-
-        // Remove sender from typing users when they send a message
-        if (message.sender?.name) {
-          setTypingUsers((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(message.sender.name);
-            return newSet;
-          });
-        }
-
-        // Reset sending state if this was our message
-        if (message.sender?._id === currentUser._id) {
-          setSending(false);
-        }
-      };
-
-      // Add event listeners
-      socket.on("typing", handleTyping);
-      socket.on("stopTyping", handleStopTyping);
-      socket.on("newMessage", handleNewMessage);
-
-      // Cleanup function
-      return () => {
-        socket.off("typing", handleTyping);
-        socket.off("stopTyping", handleStopTyping);
-        socket.off("newMessage", handleNewMessage);
-
-        // Leave the conversation room
-        socket.emit("leaveConversation", conversationId);
-
-        // Clear typing users
-        setTypingUsers(new Set());
-      };
     }
-  }, [conversationId, currentUser]);
+  }, [conversationId]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -527,7 +330,7 @@ const SingleConversation = () => {
     try {
       setLoading(true);
       const response = await LBAuth.get(`/conversations/${conversationId}`);
-      const data = response.data;
+      const data = await response.data;
       setConversation(data);
       setMessages(data.messages || []);
     } catch (error) {
@@ -541,41 +344,9 @@ const SingleConversation = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleTyping = (e) => {
-    const value = e.target.value;
-    setMessageText(value);
+  const handleInputChange = (e) => {
+    setMessageText(e.target.value);
     adjustTextareaHeight();
-
-    if (!socket || !currentUser || !conversationId) return;
-
-    // Only emit typing if user is actually typing (has content)
-    if (value.trim()) {
-      socket.emit("typing", {
-        conversationId,
-        userName: currentUser.name,
-      });
-
-      // Clear existing timeout and set new one
-      if (typingTimeout.current) {
-        clearTimeout(typingTimeout.current);
-      }
-
-      typingTimeout.current = setTimeout(() => {
-        socket.emit("stopTyping", {
-          conversationId,
-          userName: currentUser.name,
-        });
-      }, 1500);
-    } else {
-      // If input is empty, stop typing immediately
-      if (typingTimeout.current) {
-        clearTimeout(typingTimeout.current);
-      }
-      socket.emit("stopTyping", {
-        conversationId,
-        userName: currentUser.name,
-      });
-    }
   };
 
   const handleKeyPress = (e) => {
@@ -585,47 +356,60 @@ const SingleConversation = () => {
     }
   };
 
-  const handleSendMessage = () => {
-    if (!messageText.trim() || sending || !socket || !currentUser) return;
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || sending) return;
 
-    // Stop typing indicator immediately
-    if (typingTimeout.current) {
-      clearTimeout(typingTimeout.current);
+    try {
+      setSending(true);
+
+      // Create optimistic message
+      const optimisticMessage = {
+        _id: Date.now().toString(), // temporary ID
+        content: messageText.trim(),
+        sender: {
+          _id: currentUser._id,
+          name: currentUser.name,
+        },
+        createdAt: new Date().toISOString(),
+        seenBy: [currentUser._id],
+        isOptimistic: true,
+      };
+
+      // Add optimistic message to UI
+      setMessages((prev) => [...prev, optimisticMessage]);
+      setMessageText("");
+
+      // Reset textarea height
+      if (inputRef.current) {
+        inputRef.current.style.height = "auto";
+      }
+
+      // Send message to backend
+      const response = await LBAuth.post(
+        `/conversations/${conversationId}/message`,
+        {
+          content: messageText.trim(),
+        }
+      );
+
+      // Replace optimistic message with real one
+      const realMessage = response.data;
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.isOptimistic && msg.content === realMessage.content
+            ? realMessage
+            : msg
+        )
+      );
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Remove optimistic message on error
+      setMessages((prev) => prev.filter((msg) => !msg.isOptimistic));
+      // Restore message text
+      setMessageText(messageText);
+    } finally {
+      setSending(false);
     }
-    socket.emit("stopTyping", {
-      conversationId,
-      userName: currentUser.name,
-    });
-
-    const messageData = {
-      conversationId,
-      sender: {
-        _id: currentUser._id,
-        name: currentUser.name,
-      },
-      content: messageText.trim(),
-      createdAt: new Date().toISOString(),
-    };
-
-    setSending(true);
-
-    // Add temporary message for immediate UI feedback
-    const tempMessage = {
-      ...messageData,
-      _id: `temp_${Date.now()}_${Math.random()}`, // Unique temporary ID
-      tempMessage: true,
-    };
-
-    setMessages((prev) => [...prev, tempMessage]);
-    setMessageText("");
-
-    // Reset textarea height
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-    }
-
-    // Send message via socket - the real message will come back via newMessage event
-    socket.emit("sendMessage", messageData);
   };
 
   const formatMessageTime = (dateString) => {
@@ -759,7 +543,7 @@ const SingleConversation = () => {
               const showSender = !isOwn && conversation.isGroup;
 
               return (
-                <MessageGroup key={message._id || index} $isOwn={isOwn}>
+                <MessageGroup key={message._id} $isOwn={isOwn}>
                   <MessageBubble $isOwn={isOwn}>
                     {message.content}
                   </MessageBubble>
@@ -780,18 +564,6 @@ const SingleConversation = () => {
               );
             })
           )}
-
-          {/* Typing Indicator */}
-          {typingUsers.size > 0 && (
-            <TypingIndicator>
-              <TypingBubble>
-                <TypingDot />
-                <TypingDot />
-                <TypingDot />
-                <TypingText>{getTypingDisplayText()}</TypingText>
-              </TypingBubble>
-            </TypingIndicator>
-          )}
           <div ref={messagesEndRef} />
         </MessagesContainer>
 
@@ -800,7 +572,7 @@ const SingleConversation = () => {
             <MessageInput
               ref={inputRef}
               value={messageText}
-              onChange={handleTyping}
+              onChange={handleInputChange}
               onKeyPress={handleKeyPress}
               placeholder="Type a message..."
               rows={1}

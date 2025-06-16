@@ -4,7 +4,6 @@ import DashboardLayout from "../components/Layout";
 import { LBAuth } from "../api";
 import { useAuth } from "../App";
 import { Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 const Container = styled.div`
   padding: 24px;
@@ -164,19 +163,6 @@ const UnreadIndicator = styled.div`
   flex-shrink: 0;
 `;
 
-const UnreadCount = styled.span`
-  background-color: #1d9bf0;
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 10px;
-  margin-left: 8px;
-  min-width: 18px;
-  text-align: center;
-  flex-shrink: 0;
-`;
-
 const MessageContainer = styled.div`
   display: flex;
   align-items: center;
@@ -231,8 +217,6 @@ const Conversation = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
-
-  const navigate = useNavigate();
 
   // Fetch conversations on component mount
   useEffect(() => {
@@ -294,13 +278,7 @@ const Conversation = () => {
       return "No messages yet";
     }
 
-    const { content, sender } =
-      conversation.lastMessage !== null
-        ? conversation.lastMessage
-        : {
-            content: "",
-            sender: "",
-          };
+    const { content, sender } = conversation.lastMessage;
     const isCurrentUser = sender === currentUserId;
 
     if (conversation.isGroup) {
@@ -354,29 +332,10 @@ const Conversation = () => {
     return !seenBy.includes(currentUserId);
   };
 
-  const getUnreadMessageCount = (conversation, currentUserId) => {
-    if (!conversation.messages || conversation.messages.length === 0) {
-      return 0;
-    }
-
-    // Count messages where current user is not in seenBy array and didn't send the message
-    const unreadCount = conversation.messages.filter((message) => {
-      const isCurrentUserSender = message.sender === currentUserId;
-      const hasSeenMessage =
-        message.seenBy && message.seenBy.includes(currentUserId);
-
-      // Message is unread if: current user didn't send it AND hasn't seen it
-      return !isCurrentUserSender && !hasSeenMessage;
-    }).length;
-
-    return unreadCount;
-  };
-
   const handleConversationClick = (conversationId) => {
     // Navigate to conversation detail page
     console.log("Navigate to conversation:", conversationId);
     // You can implement navigation here using your router
-    navigate(`/conversation/${conversationId}`);
   };
 
   return (
@@ -424,28 +383,14 @@ const Conversation = () => {
               </EmptyState>
             ) : (
               filteredConversations.map((conversation) => {
-                const { content, sender } =
-                  conversation.lastMessage !== null
-                    ? conversation.lastMessage
-                    : {
-                        content: "",
-                        sender: "",
-                      };
-
                 const currentUserId = currentUser._id;
-
-                const isCurrentUser = sender === currentUserId;
                 const otherParticipants = getOtherParticipants(
                   conversation.participants,
                   currentUserId
                 );
 
-                // Check if message is unread and get unread count
+                // Check if message is unread
                 const isUnread = isMessageUnread(conversation, currentUserId);
-                const unreadCount = getUnreadMessageCount(
-                  conversation,
-                  currentUserId
-                );
 
                 // For display purposes
                 let displayName, displayEmail;
@@ -493,9 +438,7 @@ const Conversation = () => {
                         <LastMessageText $isUnread={isUnread}>
                           {getLastMessageDisplay(conversation, currentUserId)}
                         </LastMessageText>
-                        {!isCurrentUser && unreadCount > 0 && (
-                          <UnreadCount>{unreadCount}</UnreadCount>
-                        )}
+                        {isUnread && <UnreadIndicator />}
                       </MessageContainer>
                     </LastMessage>
                   </ConversationItem>

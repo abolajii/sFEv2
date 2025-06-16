@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Home,
   MessageCircle,
@@ -10,21 +11,6 @@ import {
   Bell,
   Settings,
 } from "lucide-react";
-
-// Mock Router Link component for demonstration
-const RouterLink = ({ to, children, ...props }) => (
-  <a
-    href={to}
-    {...props}
-    onClick={(e) => {
-      e.preventDefault();
-      console.log(`Navigating to: ${to}`);
-      if (props.onClick) props.onClick();
-    }}
-  >
-    {children}
-  </a>
-);
 
 // Styled Components with Twitter-like dark theme
 const Container = styled.div`
@@ -37,7 +23,7 @@ const Container = styled.div`
 const Sidebar = styled.aside`
   width: 275px;
   background-color: #000000;
-  border-right: 1px solid #2f3336;
+  /* border-right: 1px solid #2f3336; */
   padding: 24px;
   position: fixed;
   height: 100vh;
@@ -129,7 +115,7 @@ const Nav = styled.nav`
   gap: 4px;
 `;
 
-const MenuLink = styled(RouterLink)`
+const MenuLink = styled(Link)`
   width: 100%;
   display: flex;
   align-items: center;
@@ -144,7 +130,7 @@ const MenuLink = styled(RouterLink)`
   position: relative;
 
   ${(props) =>
-    props.isActive
+    props.$isActive
       ? `
     background-color: #1d1f23;
     color: #1d9bf0;
@@ -273,16 +259,18 @@ const NotificationDot = styled.span`
 `;
 
 const ContentArea = styled.div`
-  padding: 24px;
+  /* padding: 24px; */
   min-height: calc(100vh - 73px);
 
   @media (min-width: 769px) {
-    padding: 32px;
+    /* padding: 32px; */
   }
 `;
 
-const DashboardLayout = ({ children, activeTab = "dashboard" }) => {
+const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const menuItems = [
     { id: "dashboard", label: "Home", icon: Home, path: "/dashboard" },
@@ -305,6 +293,14 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }) => {
 
   const handleMenuClick = () => {
     setSidebarOpen(false);
+  };
+
+  const handleNotificationClick = () => {
+    navigate("/notifications");
+  };
+
+  const handleSettingsClick = () => {
+    navigate("/settings");
   };
 
   return (
@@ -330,13 +326,13 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }) => {
         <Nav>
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const isActive = location.pathname === item.path;
 
             return (
               <MenuLink
                 key={item.id}
                 to={item.path}
-                isActive={isActive}
+                $isActive={isActive}
                 onClick={handleMenuClick}
               >
                 <MenuIcon>
@@ -359,11 +355,11 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }) => {
           </MobileMenuButton>
 
           <TopBarActions>
-            <ActionButton>
+            <ActionButton onClick={handleNotificationClick}>
               <Bell size={20} />
               <NotificationDot />
             </ActionButton>
-            <ActionButton>
+            <ActionButton onClick={handleSettingsClick}>
               <Settings size={20} />
             </ActionButton>
           </TopBarActions>

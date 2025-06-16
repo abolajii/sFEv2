@@ -424,7 +424,7 @@ const Home = () => {
   return (
     <Container>
       <Header>
-        <h1>{currentUser?.name}</h1>
+        <h1>Discover People</h1>
         <p>Find your perfect match from amazing people around you</p>
       </Header>
 

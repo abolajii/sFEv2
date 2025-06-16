@@ -164,8 +164,22 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-          <Route path="/conversations" element={<Conversation />} />
-          <Route path="/conversations/:id" element={<SingleConversation />} />
+          <Route
+            path="/conversations"
+            element={
+              <ProtectedRoute>
+                <Conversation />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/conversation/:id"
+            element={
+              <ProtectedRoute>
+                <SingleConversation />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </AuthProvider>
     </ToastProvider>
