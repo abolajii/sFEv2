@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import DashboardLayout from "../components/Layout";
-import { LBAuth } from "../api";
+import { LBAuth, socketUrl } from "../api";
 import { useAuth } from "../App";
 import { Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import io from "socket.io-client";
 
 const Container = styled.div`
   padding: 24px;
@@ -74,8 +76,8 @@ const ConversationList = styled.div`
 const ConversationItem = styled.div`
   background: #16181c;
   border: 1px solid #2f3336;
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
 
@@ -135,9 +137,9 @@ const GroupBadge = styled.span`
 `;
 
 const LastMessage = styled.div`
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #2f3336;
+  /* margin-top: 12px; */
+  /* padding-top: 12px; */
+  /* border-top: 1px solid #2f3336; */
 `;
 
 const LastMessageText = styled.p`
@@ -160,6 +162,19 @@ const UnreadIndicator = styled.div`
   background-color: #1d9bf0;
   border-radius: 50%;
   margin-left: 8px;
+  flex-shrink: 0;
+`;
+
+const UnreadCount = styled.span`
+  background-color: #1d9bf0;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 8px;
+  min-width: 18px;
+  text-align: center;
   flex-shrink: 0;
 `;
 
@@ -211,6 +226,30 @@ const LoadingSpinner = styled.div`
   }
 `;
 
+const TypingIndicator = styled.div`
+  font-size: 14px;
+  color: #1d9bf0;
+  font-style: italic;
+  margin: 0;
+  line-height: 1.5;
+  animation: pulse 1.5s ease-in-out infinite;
+
+  @keyframes pulse {
+    0% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.6;
+    }
+  }
+`;
+
+// Initialize socket outside component to prevent re-initialization
+let socket = null;
+
 const Conversation = () => {
   const [conversations, setConversations] = useState([]);
   const [filteredConversations, setFilteredConversations] = useState([]);
@@ -218,11 +257,140 @@ const Conversation = () => {
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
 
-  // Fetch conversations on component mount
+  // State to track typing users per conversation
+  const [typingUsers, setTypingUsers] = useState({}); // { conversationId: Set of userNames }
+
+  // Enhanced typing event handler
+  // Handle user started typing
+  const handleTyping = (data) => {
+    const { userName, userId, conversationId } = data;
+
+    // Don't show typing indicator for current user
+    if (userId === currentUser?._id || userName === currentUser?.name) {
+      return;
+    }
+
+    console.log("User started typing:", { userName, userId, conversationId });
+
+    setTypingUsers((prev) => {
+      const newTypingUsers = { ...prev };
+
+      if (!newTypingUsers[conversationId]) {
+        newTypingUsers[conversationId] = new Set();
+      }
+
+      newTypingUsers[conversationId].add(userName);
+      return newTypingUsers;
+    });
+
+    // Auto-clear typing indicator after timeout (safety net)
+    setTimeout(() => {
+      setTypingUsers((prev) => {
+        const newTypingUsers = { ...prev };
+        if (newTypingUsers[conversationId]) {
+          newTypingUsers[conversationId].delete(userName);
+          if (newTypingUsers[conversationId].size === 0) {
+            delete newTypingUsers[conversationId];
+          }
+        }
+        return newTypingUsers;
+      });
+    }, 5000); // 5 seconds timeout
+  };
+
+  // Handle user stopped typing
+  const handleStopTyping = (data) => {
+    const { userName, userId, conversationId } = data;
+
+    // Don't process for current user
+    if (userId === currentUser?._id || userName === currentUser?.name) {
+      return;
+    }
+
+    console.log("User stopped typing:", { userName, userId, conversationId });
+
+    setTypingUsers((prev) => {
+      const newTypingUsers = { ...prev };
+
+      if (newTypingUsers[conversationId]) {
+        newTypingUsers[conversationId].delete(userName);
+        if (newTypingUsers[conversationId].size === 0) {
+          delete newTypingUsers[conversationId];
+        }
+      }
+
+      return newTypingUsers;
+    });
+  };
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = JSON.parse(localStorage.getItem("token"))?.accessToken;
+    if (!socket) {
+      socket = io(socketUrl, {
+        auth: { token },
+      });
+    }
+  }, []);
+
+  // // Fetch conversations on component mount
+  // useEffect(() => {
+  //   console.log("typing...");
+  //   socket.on("typing", handleTyping);
+
+  //   return () => {
+  //     socket.off("typing", handleTyping);
+  //   };
+  // }, [currentUser]);
+
   useEffect(() => {
     fetchConversations();
   }, []);
 
+  useEffect(() => {
+    if (!socket || !currentUser) return;
+
+    console.log("Setting up typing event listeners...");
+
+    socket.on("newMessage", (newMessage) => {
+      console.log("New message received:", newMessage);
+
+      // Update conversations state to reflect the new last message
+      setConversations((prev) =>
+        prev.map((conversation) => {
+          if (conversation._id === newMessage.conversation) {
+            return {
+              ...conversation,
+              lastMessage: newMessage,
+              updatedAt: newMessage.createdAt,
+              // Optionally update message count if you track it
+              messages: [...(conversation.messages || []), newMessage],
+            };
+          }
+          return conversation;
+        })
+      );
+    });
+
+    // Listen for typing events (user started typing)
+    socket.on("typing", handleTyping);
+
+    // Listen for stop typing events (user stopped typing)
+    socket.on("stopTyping", handleStopTyping);
+
+    // Join all conversation rooms when conversations are loaded
+    conversations.forEach((conversation) => {
+      socket.emit("joinConversation", conversation._id);
+      console.log(`Joining conversation room: ${conversation._id}`);
+    });
+
+    return () => {
+      socket.off("typing", handleTyping);
+      socket.off("newMessage");
+      socket.off("stopTyping", handleStopTyping);
+    };
+  }, [currentUser, conversations]);
   // Filter conversations based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -238,6 +406,25 @@ const Conversation = () => {
       setFilteredConversations(filtered);
     }
   }, [searchTerm, conversations]);
+
+  // Helper function to get typing indicator text
+  // Helper function to get typing indicator text
+  const getTypingIndicator = (conversationId) => {
+    const typingUsersSet = typingUsers[conversationId];
+    if (!typingUsersSet || typingUsersSet.size === 0) {
+      return null;
+    }
+
+    const typingUserNames = Array.from(typingUsersSet);
+
+    if (typingUserNames.length === 1) {
+      return `typing...`;
+    } else if (typingUserNames.length === 2) {
+      return `${typingUserNames[0]} and ${typingUserNames[1]} are typing...`;
+    } else {
+      return `${typingUserNames.length} people are typing...`;
+    }
+  };
 
   const fetchConversations = async () => {
     try {
@@ -278,7 +465,13 @@ const Conversation = () => {
       return "No messages yet";
     }
 
-    const { content, sender } = conversation.lastMessage;
+    const { content, sender } =
+      conversation.lastMessage !== null
+        ? conversation.lastMessage
+        : {
+            content: "",
+            sender: "",
+          };
     const isCurrentUser = sender === currentUserId;
 
     if (conversation.isGroup) {
@@ -332,10 +525,29 @@ const Conversation = () => {
     return !seenBy.includes(currentUserId);
   };
 
+  const getUnreadMessageCount = (conversation, currentUserId) => {
+    if (!conversation.messages || conversation.messages.length === 0) {
+      return 0;
+    }
+
+    // Count messages where current user is not in seenBy array and didn't send the message
+    const unreadCount = conversation.messages.filter((message) => {
+      const isCurrentUserSender = message.sender === currentUserId;
+      const hasSeenMessage =
+        message.seenBy && message.seenBy.includes(currentUserId);
+
+      // Message is unread if: current user didn't send it AND hasn't seen it
+      return !isCurrentUserSender && !hasSeenMessage;
+    }).length;
+
+    return unreadCount;
+  };
+
   const handleConversationClick = (conversationId) => {
     // Navigate to conversation detail page
     console.log("Navigate to conversation:", conversationId);
     // You can implement navigation here using your router
+    navigate(`/conversation/${conversationId}`);
   };
 
   return (
@@ -384,19 +596,34 @@ const Conversation = () => {
             ) : (
               filteredConversations.map((conversation) => {
                 const currentUserId = currentUser._id;
+
+                const { content, sender } =
+                  conversation.lastMessage !== null
+                    ? conversation.lastMessage
+                    : {
+                        content: "",
+                        sender: "",
+                      };
+
+                const isCurrentUser = sender === currentUserId;
+
                 const otherParticipants = getOtherParticipants(
                   conversation.participants,
                   currentUserId
                 );
 
-                // Check if message is unread
                 const isUnread = isMessageUnread(conversation, currentUserId);
+                const unreadCount = getUnreadMessageCount(
+                  conversation,
+                  currentUserId
+                );
 
-                // For display purposes
+                // Get typing indicator for this conversation
+                const typingIndicator = getTypingIndicator(conversation._id);
+
+                // Display logic (same as before)
                 let displayName, displayEmail;
-
                 if (conversation.isGroup) {
-                  // For group chats, show all participant names or a group name
                   const participantNames = conversation.participants
                     .filter((p) => p._id !== currentUserId)
                     .map((p) => p.name.split(" ")[0])
@@ -404,7 +631,6 @@ const Conversation = () => {
                   displayName = participantNames || "Group Chat";
                   displayEmail = `${conversation.participants.length} participants`;
                 } else {
-                  // For one-on-one chats, show the other participant
                   const displayParticipant =
                     otherParticipants[0] || conversation.participants[0];
                   displayName = displayParticipant?.name || "Unknown User";
@@ -424,7 +650,7 @@ const Conversation = () => {
                             <GroupBadge>Group</GroupBadge>
                           )}
                         </ParticipantName>
-                        <ParticipantEmail>{displayEmail}</ParticipantEmail>
+                        {/* <ParticipantEmail>{displayEmail}</ParticipantEmail> */}
                       </ParticipantInfo>
                       <ConversationMeta>
                         <LastMessageTime>
@@ -435,10 +661,16 @@ const Conversation = () => {
 
                     <LastMessage>
                       <MessageContainer>
-                        <LastMessageText $isUnread={isUnread}>
-                          {getLastMessageDisplay(conversation, currentUserId)}
-                        </LastMessageText>
-                        {isUnread && <UnreadIndicator />}
+                        {typingIndicator ? (
+                          <TypingIndicator>{typingIndicator}</TypingIndicator>
+                        ) : (
+                          <LastMessageText $isUnread={isUnread}>
+                            {getLastMessageDisplay(conversation, currentUserId)}
+                          </LastMessageText>
+                        )}
+                        {!isCurrentUser && unreadCount > 0 && (
+                          <UnreadCount>{unreadCount}</UnreadCount>
+                        )}
                       </MessageContainer>
                     </LastMessage>
                   </ConversationItem>

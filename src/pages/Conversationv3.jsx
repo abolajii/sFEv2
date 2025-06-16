@@ -6,7 +6,6 @@ import { useAuth } from "../App";
 import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
-import { format } from "date-fns";
 
 const Container = styled.div`
   padding: 24px;
@@ -387,6 +386,164 @@ const Conversation = () => {
 
     console.log("Setting up typing event listeners...");
 
+    // Enhanced newMessage handler with animation
+    // socket.on("newMessage", (newMessage) => {
+    //   console.log("New message received:", newMessage);
+
+    //   setConversations((prev) => {
+    //     const updatedConversationIndex = prev.findIndex(
+    //       (conv) => conv._id === newMessage.conversation
+    //     );
+
+    //     if (updatedConversationIndex === -1) return prev;
+
+    //     // If multiple conversations and not at top, trigger animation
+    //     if (prev.length > 1 && updatedConversationIndex > 0) {
+    //       // Start animation
+    //       setAnimationState({
+    //         isAnimating: true,
+    //         movingConversationId: newMessage.conversation,
+    //         itemHeight: 112,
+    //         movingFromIndex: updatedConversationIndex,
+    //       });
+
+    //       // Apply animations immediately, then update state after animation
+    //       setTimeout(() => {
+    //         // Update the actual order after animation
+    //         const updatedConversation = {
+    //           ...prev[updatedConversationIndex],
+    //           lastMessage: newMessage,
+    //           updatedAt: newMessage.createdAt,
+    //         };
+
+    //         const newConversations = [
+    //           updatedConversation,
+    //           ...prev.slice(0, updatedConversationIndex),
+    //           ...prev.slice(updatedConversationIndex + 1),
+    //         ];
+
+    //         setConversations(newConversations);
+
+    //         // Clear animation state
+    //         setAnimationState({
+    //           isAnimating: false,
+    //           movingConversationId: null,
+    //           itemHeight: 112,
+    //         });
+    //       }, 500); // Match CSS transition duration
+
+    //       // Return current state during animation (don't reorder yet)
+    //       return prev.map((conversation) => {
+    //         if (conversation._id === newMessage.conversation) {
+    //           return {
+    //             ...conversation,
+    //             lastMessage: newMessage,
+    //             updatedAt: newMessage.createdAt,
+    //           };
+    //         }
+    //         return conversation;
+    //       });
+    //     }
+
+    //     // No animation needed - just update
+    //     return prev
+    //       .map((conversation) => {
+    //         if (conversation._id === newMessage.conversation) {
+    //           return {
+    //             ...conversation,
+    //             lastMessage: newMessage,
+    //             updatedAt: newMessage.createdAt,
+    //           };
+    //         }
+    //         return conversation;
+    //       })
+    //       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    //   });
+    // });
+
+    // socket.on("newMessage", (newMessage) => {
+    //   console.log("New message received:", newMessage);
+
+    //   setConversations((prev) => {
+    //     const updatedConversationIndex = prev.findIndex(
+    //       (conv) => conv._id === newMessage.conversation
+    //     );
+
+    //     if (updatedConversationIndex === -1) return prev;
+
+    //     // Create the updated conversation object
+    //     const updatedConversation = {
+    //       ...prev[updatedConversationIndex],
+    //       lastMessage: newMessage,
+    //       updatedAt: newMessage.createdAt,
+    //     };
+
+    //     // If multiple conversations and not at top, trigger animation
+    //     if (prev.length > 1 && updatedConversationIndex > 0) {
+    //       // Start animation state
+    //       setAnimationState({
+    //         isAnimating: true,
+    //         movingConversationId: newMessage.conversation,
+    //         itemHeight: 112,
+    //         movingFromIndex: updatedConversationIndex,
+    //       });
+
+    //       // Update conversations array immediately but keep the same order for animation
+    //       const updatedConversations = prev.map((conversation, index) => {
+    //         if (index === updatedConversationIndex) {
+    //           return updatedConversation;
+    //         }
+    //         return conversation;
+    //       });
+
+    //       // Set timeout to reorder after animation completes
+    //       setTimeout(() => {
+    //         setConversations((currentConversations) => {
+    //           // Find the conversation again in case state changed
+    //           const currentIndex = currentConversations.findIndex(
+    //             (conv) => conv._id === newMessage.conversation
+    //           );
+
+    //           if (currentIndex === -1) return currentConversations;
+
+    //           const conversationToMove = currentConversations[currentIndex];
+
+    //           // Create new array with conversation moved to top
+    //           const newConversations = [
+    //             conversationToMove,
+    //             ...currentConversations.slice(0, currentIndex),
+    //             ...currentConversations.slice(currentIndex + 1),
+    //           ];
+
+    //           return newConversations;
+    //         });
+
+    //         // Clear animation state
+    //         setAnimationState({
+    //           isAnimating: false,
+    //           movingConversationId: null,
+    //           itemHeight: 112,
+    //         });
+    //       }, 100); // Match CSS transition duration
+
+    //       // Return updated conversations with same order for animation
+    //       return updatedConversations;
+    //     }
+
+    //     // No animation needed - conversation is already at top or only one conversation
+    //     const newConversations = [
+    //       updatedConversation,
+    //       ...prev.slice(0, updatedConversationIndex),
+    //       ...prev.slice(updatedConversationIndex + 1),
+    //     ];
+
+    //     return newConversations;
+    //   });
+    // });
+
+    // Replace your newMessage socket handler with this optimized version
+
+    // 1. Replace your socket handler with this simpler version:
     socket.on("newMessage", (newMessage) => {
       console.log("New message received:", newMessage);
 
@@ -498,39 +655,16 @@ const Conversation = () => {
   };
 
   const formatDate = (dateString) => {
-    // const date = new Date(dateString);
-    // const now = new Date();
-    // const diffTime = Math.abs(now - date);
-    // const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    // if (diffDays === 1) return "Today";
-    // if (diffDays === 2) return "Yesterday";
-    // if (diffDays <= 7) return `${diffDays} days ago`;
-
-    // return date.toLocaleDateString();
-
     const date = new Date(dateString);
     const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    const isToday =
-      date.getDate() === now.getDate() &&
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear();
+    if (diffDays === 1) return "Today";
+    if (diffDays === 2) return "Yesterday";
+    if (diffDays <= 7) return `${diffDays} days ago`;
 
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const isYesterday =
-      date.getDate() === yesterday.getDate() &&
-      date.getMonth() === yesterday.getMonth() &&
-      date.getFullYear() === yesterday.getFullYear();
-
-    if (isToday) {
-      return `Today at ${format(date, "h:mmaaa")}`; // e.g., "Today at 3:00PM"
-    } else if (isYesterday) {
-      return `Yesterday at ${format(date, "h:mmaaa")}`;
-    } else {
-      return format(date, "dd MMM, yyyy 'at' h:mmaaa"); // e.g., "14 Jun, 2025 at 2:30PM"
-    }
+    return date.toLocaleDateString();
   };
 
   const getOtherParticipants = (participants, currentUserId) => {
@@ -671,6 +805,121 @@ const Conversation = () => {
                 </p>
               </EmptyState>
             ) : (
+              // filteredConversations.map((conversation, index) => {
+              //   const currentUserId = currentUser._id;
+              //   // const isAnimating = animatingConversation === conversation._id;
+              //   // let delay = 50;
+              //   const {
+              //     isAnimating,
+              //     movingConversationId,
+              //     itemHeight,
+              //     movingFromIndex,
+              //   } = animationState;
+
+              //   const { content, sender } =
+              //     conversation.lastMessage !== null
+              //       ? conversation.lastMessage
+              //       : {
+              //           content: "",
+              //           sender: "",
+              //         };
+
+              //   const isCurrentUser = sender === currentUserId;
+
+              //   const otherParticipants = getOtherParticipants(
+              //     conversation.participants,
+              //     currentUserId
+              //   );
+
+              //   const isUnread = isMessageUnread(conversation, currentUserId);
+              //   const unreadCount = getUnreadMessageCount(
+              //     conversation,
+              //     currentUserId
+              //   );
+
+              //   // Get typing indicator for this conversation
+              //   const typingIndicator = getTypingIndicator(conversation._id);
+
+              //   // Display logic (same as before)
+              //   let displayName, displayEmail;
+              //   if (conversation.isGroup) {
+              //     const participantNames = conversation.participants
+              //       .filter((p) => p._id !== currentUserId)
+              //       .map((p) => p.name.split(" ")[0])
+              //       .join(", ");
+              //     displayName = participantNames || "Group Chat";
+              //     displayEmail = `${conversation.participants.length} participants`;
+              //   } else {
+              //     const displayParticipant =
+              //       otherParticipants[0] || conversation.participants[0];
+              //     displayName = displayParticipant?.name || "Unknown User";
+              //     displayEmail = displayParticipant?.email || "";
+              //   }
+
+              //   let animationClass = "";
+              //   let slideDistance = 30;
+
+              //   if (isAnimating && movingConversationId) {
+              //     if (conversation._id === movingConversationId) {
+              //       // This is the conversation moving up
+              //       animationClass = "slide-up";
+              //       slideDistance = movingFromIndex * itemHeight; // Distance to slide up
+              //     } else if (index < movingFromIndex) {
+              //       // These are conversations that need to slide down
+              //       animationClass = "slide-down";
+              //     }
+              //   }
+
+              //   return (
+              //     <ConversationItemAnimated
+              //       // key={conversation._id}
+              //       // className={wasRecentlyMoved ? "sliding-down" : ""}
+              //       // onClick={() => handleConversationClick(conversation._id)}
+              //       key={conversation._id}
+              //       className={animationClass}
+              //       $slideDistance={slideDistance}
+              //       $itemHeight={itemHeight}
+              //       onClick={() => handleConversationClick(conversation._id)}
+              //     >
+              //       {/* <ConversationItem
+              //       key={conversation._id}
+              //       onClick={() => handleConversationClick(conversation._id)}
+              //     > */}
+              //       <ConversationHeader>
+              //         <ParticipantInfo>
+              //           <ParticipantName>
+              //             {displayName}
+              //             {conversation.isGroup && (
+              //               <GroupBadge>Group</GroupBadge>
+              //             )}
+              //           </ParticipantName>
+              //           {/* <ParticipantEmail>{displayEmail}</ParticipantEmail> */}
+              //         </ParticipantInfo>
+              //         <ConversationMeta>
+              //           <LastMessageTime>
+              //             {formatDate(conversation.updatedAt)}
+              //           </LastMessageTime>
+              //         </ConversationMeta>
+              //       </ConversationHeader>
+
+              //       <LastMessage>
+              //         <MessageContainer>
+              //           {typingIndicator ? (
+              //             <TypingIndicator>{typingIndicator}</TypingIndicator>
+              //           ) : (
+              //             <LastMessageText $isUnread={isUnread}>
+              //               {getLastMessageDisplay(conversation, currentUserId)}
+              //             </LastMessageText>
+              //           )}
+              //           {!isCurrentUser && unreadCount > 0 && (
+              //             <UnreadCount>{unreadCount}</UnreadCount>
+              //           )}
+              //         </MessageContainer>
+              //       </LastMessage>
+              //     </ConversationItemAnimated>
+              //   );
+              // })
+
               filteredConversations.map((conversation, index) => {
                 const currentUserId = currentUser._id;
                 const otherParticipants = getOtherParticipants(

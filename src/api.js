@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const prod = true;
+const prod = !true;
 
 export const getToken = async () => {
   const token = await localStorage.getItem("token");
